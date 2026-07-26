@@ -1,0 +1,8 @@
+{
+  "sounds": [
+    { "id": "bell",  "label": "Bell",  "file": "bell.wav",  "note": "Soft struck glass. Default." },
+    { "id": "chime", "label": "Chime", "file": "chime.wav", "note": "Three rising notes." },
+    { "id": "block", "label": "Block", "file": "block.wav", "note": "Dry wooden tick." },
+    { "id": "gong",  "label": "Gong",  "file": "gong.wav",  "note": "Low and slow." }
+  ]
+}

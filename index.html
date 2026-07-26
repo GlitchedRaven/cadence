@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#DCE0DD">
+<title>Cadence — attention ledger</title>
+<link rel="stylesheet" href="css/app.css">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Cadence">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="description" content="Record how many focus units you hold for a task before your attention goes.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%23171B19'/><rect x='4' y='3' width='1.6' height='10' fill='%232E6B58'/><rect x='7.2' y='3' width='1.6' height='10' fill='%232E6B58'/><rect x='10.4' y='3' width='1.6' height='10' fill='%23DCE0DD'/></svg>">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="wordmark">
+    <span class="wordmark__name">Cadence</span>
+    <span class="wordmark__sub">attention ledger</span>
+  </div>
+  <div class="masthead__tools">
+    <label class="field field--inline">
+      <span class="field__label">Sound</span>
+      <select id="soundSelect" class="input input--slim"></select>
+    </label>
+    <button class="btn btn--ghost" id="testSound" title="Play the selected sound">Test</button>
+    <button class="btn btn--ghost" id="exportBtn">Export</button>
+    <button class="btn btn--ghost" id="importBtn">Import</button>
+    <input type="file" id="importInput" accept="application/json,.json" hidden>
+  </div>
+</header>
+
+<main class="shell">
+
+  <aside class="rail">
+    <div class="rail__head">
+      <h2 class="eyebrow">Tasks</h2>
+      <button class="btn btn--mini" id="newTaskBtn">New task</button>
+    </div>
+    <ul class="tasklist" id="taskList"></ul>
+    <p class="rail__hint" id="railHint" hidden>Nothing here yet. Create a task to start keeping count.</p>
+  </aside>
+
+  <section class="stage" id="stage" hidden>
+
+    <div class="stage__head">
+      <div>
+        <h1 class="taskname" id="taskName">—</h1>
+        <p class="taskmeta" id="taskMeta"></p>
+      </div>
+      <div class="stage__headtools">
+        <button class="btn btn--ghost" id="editTaskBtn">Edit</button>
+        <button class="btn btn--ghost" id="paletteBtn">Palette</button>
+      </div>
+    </div>
+
+    <div class="instrument" id="instrument">
+      <div class="instrument__top">
+        <span class="phase" id="phaseLabel">Focus</span>
+        <span class="phase phase--counter" id="stretchLabel">Stretch not started</span>
+      </div>
+
+      <div class="clock" id="clock">00:00</div>
+
+      <div class="rule" aria-hidden="true">
+        <div class="rule__ticks"></div>
+        <div class="rule__fill" id="ruleFill"></div>
+        <div class="rule__head" id="ruleHead"></div>
+      </div>
+
+      <div class="controls">
+        <button class="btn btn--primary" id="startBtn">Start</button>
+        <button class="btn" id="resetBtn">Reset</button>
+        <button class="btn" id="skipBtn">Skip phase</button>
+        <button class="btn btn--edge" id="endStretchBtn" disabled>End stretch</button>
+      </div>
+
+      <div class="livetally">
+        <div class="tally tally--live" id="liveTally"></div>
+        <span class="livetally__count" id="liveCount">0 in this stretch</span>
+      </div>
+    </div>
+
+    <div class="ledger">
+      <div class="ledger__head">
+        <h2 class="eyebrow">Ledger</h2>
+        <div class="stats" id="stats"></div>
+      </div>
+      <div id="ledgerBody"></div>
+    </div>
+
+  </section>
+
+  <section class="stage stage--empty" id="emptyStage">
+    <div class="empty">
+      <div class="tally tally--demo"><i></i><i></i><i></i><i></i><i class="faint"></i></div>
+      <h1 class="empty__title">Count the stretches, not the hours.</h1>
+      <p class="empty__text">Make a task, set its focus and break lengths, then run the timer.
+        Each finished focus adds a stroke. After every break the app asks whether you want to carry on, need to, or would rather stop — and keeps the answer.</p>
+      <button class="btn btn--primary" id="emptyNewTask">Create your first task</button>
+    </div>
+  </section>
+
+</main>
+
+<!-- ── Task editor ───────────────────────────────────────────── -->
+<dialog class="sheet" id="taskDialog">
+  <form method="dialog" class="sheet__form" id="taskForm">
+    <h2 class="sheet__title" id="taskDialogTitle">New task</h2>
+
+    <label class="field">
+      <span class="field__label">Name</span>
+      <input class="input" id="fName" required maxlength="60" placeholder="Thesis chapter 3" autocomplete="off">
+    </label>
+
+    <div class="grid2">
+      <label class="field">
+        <span class="field__label">Focus unit</span>
+        <input class="input input--time" id="fFocus" placeholder="25:00" inputmode="numeric" required>
+      </label>
+      <label class="field">
+        <span class="field__label">Break unit</span>
+        <input class="input input--time" id="fBreak" placeholder="05:00" inputmode="numeric" required>
+      </label>
+    </div>
+    <p class="hint">Minutes:seconds. <code>25</code>, <code>25:00</code> and <code>1500s</code> all work.</p>
+
+    <div class="sheet__foot">
+      <button class="btn btn--danger" id="deleteTaskBtn" type="button" hidden>Delete task</button>
+      <span class="spacer"></span>
+      <button class="btn" value="cancel" formnovalidate>Cancel</button>
+      <button class="btn btn--primary" id="saveTaskBtn" value="save">Save task</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ── Carry on? ─────────────────────────────────────────────── -->
+<dialog class="sheet" id="continueDialog">
+  <div class="sheet__form">
+    <h2 class="sheet__title" id="continueTitle">Break's over</h2>
+    <p class="sheet__lede" id="continueSummary"></p>
+
+    <div class="choices" id="choices">
+      <button class="choice" type="button" data-choice="want">
+        <span class="choice__key">1</span>
+        <span class="choice__text">
+          <span class="choice__title">I want to keep going</span>
+          <span class="choice__sub">The work is still pulling me in.</span>
+        </span>
+      </button>
+      <button class="choice" type="button" data-choice="need">
+        <span class="choice__key">2</span>
+        <span class="choice__text">
+          <span class="choice__title">I need to keep going</span>
+          <span class="choice__sub">A deadline or a promise is doing the pulling.</span>
+        </span>
+      </button>
+      <button class="choice choice--stop" type="button" data-choice="stop">
+        <span class="choice__key">3</span>
+        <span class="choice__text">
+          <span class="choice__title">I'm stopping here</span>
+          <span class="choice__sub">This is where my attention ends today.</span>
+        </span>
+      </button>
+    </div>
+
+    <p class="hint">Recorded with the stretch. <kbd>Esc</kbd> to decide later — the clock stays paused.</p>
+  </div>
+</dialog>
+
+<!-- ── Stretch note ──────────────────────────────────────────── -->
+<dialog class="sheet" id="noteDialog">
+  <form method="dialog" class="sheet__form" id="noteForm">
+    <h2 class="sheet__title">End of stretch</h2>
+    <p class="sheet__lede" id="noteSummary"></p>
+
+    <div class="chips" id="feelChips">
+      <button type="button" class="chip" data-feel="fresh">Still fresh</button>
+      <button type="button" class="chip" data-feel="fading">Fading</button>
+      <button type="button" class="chip" data-feel="spent">Spent</button>
+      <button type="button" class="chip" data-feel="interrupted">Interrupted</button>
+    </div>
+
+    <label class="field">
+      <span class="field__label">Note</span>
+      <textarea class="input" id="fNote" rows="3" placeholder="Lost the thread after the fourth one."></textarea>
+    </label>
+
+    <div class="sheet__foot">
+      <span class="spacer"></span>
+      <button class="btn" value="discard" type="submit" formnovalidate>Discard stretch</button>
+      <button class="btn btn--primary" value="save">Save to ledger</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ── Palette picker ────────────────────────────────────────── -->
+<dialog class="sheet sheet--wide" id="paletteDialog">
+  <div class="sheet__form">
+    <h2 class="sheet__title">Palette</h2>
+    <p class="sheet__lede">Press <kbd>Space</kbd> to reshuffle every unlocked swatch. Click a swatch to lock it.</p>
+
+    <div class="swatches" id="swatches"></div>
+
+    <div class="palette__row">
+      <label class="field field--inline">
+        <span class="field__label">Harmony</span>
+        <select class="input input--slim" id="harmonySelect">
+          <option value="analogous">Analogous</option>
+          <option value="complementary">Complementary</option>
+          <option value="triadic">Triadic</option>
+          <option value="mono">Monochrome</option>
+        </select>
+      </label>
+      <label class="field field--inline">
+        <span class="field__label">Key</span>
+        <select class="input input--slim" id="keySelect">
+          <option value="dark">Dark</option>
+          <option value="light">Light</option>
+        </select>
+      </label>
+      <button class="btn" id="shuffleBtn">Shuffle</button>
+      <span class="contrast" id="contrastNote"></span>
+    </div>
+
+    <h3 class="eyebrow">Presets</h3>
+    <div class="presets" id="presets"></div>
+
+    <div class="sheet__foot">
+      <span class="spacer"></span>
+      <button class="btn" id="paletteCancel">Cancel</button>
+      <button class="btn btn--primary" id="paletteApply">Apply palette</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- ── Import ────────────────────────────────────────────────── -->
+<dialog class="sheet" id="importDialog">
+  <form method="dialog" class="sheet__form">
+    <h2 class="sheet__title">Import a backup</h2>
+    <p class="sheet__lede" id="importSummary"></p>
+    <div class="sheet__foot">
+      <span class="spacer"></span>
+      <button class="btn" value="cancel">Cancel</button>
+      <button class="btn" value="merge">Merge with current</button>
+      <button class="btn btn--danger" value="replace">Replace everything</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
